@@ -1,0 +1,31 @@
+- name: Deploy MongoDB on Kubernetes
+  hosts: localhost
+  gather_facts: False
+  tasks:
+
+  - name: Check if Helm is installed
+    command: helm version --short
+    register: helm_check
+    ignore_errors: yes
+
+  - name: Install Helm (if not installed)
+    command: curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 && chmod 700 get_helm.sh && ./get_helm.sh
+    when: helm_check.failed
+
+  - name: Add Bitnami Helm repository
+    command: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+  - name: Update Helm repositories
+    command: helm repo update
+
+  - name: Check if Kubernetes secret exists
+    command: kubectl get secret mongo-secret
+    register: secret_check
+    ignore_errors: yes
+
+  - name: Create Kubernetes secret for MongoDB credentials
+    command: kubectl create secret generic mongo-secret --from-literal=mongodb-root-password=R1ckm0dee$
+    when: secret_check.failed
+
+  - name: Install MongoDB Helm chart
+    command: helm install my-mongo bitnami/mongodb --set existingSecret=mongo-secret
