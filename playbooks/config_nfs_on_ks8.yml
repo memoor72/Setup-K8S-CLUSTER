@@ -1,0 +1,19 @@
+- hosts: kube_control_plane
+  become: yes
+  tasks:
+  - name: Create NFS Persistent Volume
+    command: kubectl apply -f -
+    args:
+      stdin: |
+        apiVersion: v1
+        kind: PersistentVolume
+        metadata:
+          name: nfs-pv
+        spec:
+          capacity:
+            storage: 10Gi
+          accessModes:
+            - ReadWriteOnce
+          nfs:
+            server: 192.168.50.18
+            path: "/srv/nfs"

@@ -1,0 +1,140 @@
+- name: Deploy production-grade MySQL on Kubernetes
+  hosts: app_node
+  gather_facts: no
+  tasks:
+
+  - name: Check if python3-pip is installed
+    command: pip3 --version
+    register: pip3_check
+    ignore_errors: yes
+
+  - name: Install pip3
+    apt:
+      name: python3-pip
+      state: present
+    become: yes
+    when: pip3_check.failed
+
+  - name: Install necessary python libraries
+    pip:
+      name: kubernetes
+      state: present
+    become: yes
+
+  - name: Create or update a namespace
+    k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: mysql-namespace
+
+  - name: Create or update a secret
+    k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: mysql-root-pass
+          namespace: mysql-namespace
+        type: Opaque
+        data:
+          password: "{{ 'Mycompl3xp@$$w0rd' | b64encode }}"
+
+  - name: Create or update a persistent volume
+    k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: PersistentVolume
+        metadata:
+          name: mysql-pv
+          labels:
+            type: nfs
+        spec:
+          storageClassName: nfs-storage
+          capacity:
+            storage: 10Gi
+          accessModes:
+          - ReadWriteOnce
+          nfs: # NFS configuration
+            path: "/srv/nfs"
+            server: 192.168.50.18 # IP of your NFS server
+          persistentVolumeReclaimPolicy: Retain
+
+  - name: Create or update a persistent volume claim
+    k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: mysql-pv-claim
+          namespace: mysql-namespace
+        spec:
+          storageClassName: nfs-storage
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+
+
+  - name: Deploy or update MySQL
+    k8s:
+      state: present
+      definition:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: mysql
+          namespace: mysql-namespace
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: mysql
+          template:
+            metadata:
+              labels:
+                app: mysql
+            spec:
+              containers:
+              - name: mysql
+                image: mysql:8.0
+                args:
+                - "--default-authentication-plugin=mysql_native_password"
+                volumeMounts:
+                - name: mysql-storage
+                  mountPath: /var/lib/mysql
+                env:
+                - name: MYSQL_ROOT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mysql-root-pass
+                      key: password
+                ports:
+                - containerPort: 3306
+              volumes:
+              - name: mysql-storage
+                persistentVolumeClaim:
+                  claimName: mysql-pv-claim
+
+  - name: Create or update a service
+    k8s:
+      state: present
+      definition:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: mysql-service
+          namespace: mysql-namespace
+        spec:
+          selector:
+            app: mysql
+          ports:
+          - protocol: TCP
+            port: 3306
+          type: NodePort

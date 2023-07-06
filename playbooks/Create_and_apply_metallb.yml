@@ -1,0 +1,32 @@
+- name: Deploy MetalLB on Kubernetes
+  hosts: loadbalancer
+  gather_facts: true
+  tasks:
+
+  - name: Create MetalLB values file
+    copy:
+      content: |
+        controller:
+          existingConfigMap: metallb-config
+        configInline:
+          address-pools:
+          - name: default
+            protocol: layer2
+            addresses:
+            - 192.168.50.100-192.168.50.200
+      dest: /home/vagrant/metallb_values.yaml
+    become: yes
+
+  - name: Install MetalLB with increased timeout and custom values
+    command: helm install metallb bitnami/metallb -f /home/vagrant/metallb_values.yaml --namespace metallb-system --timeout 600s
+    register: helm_install
+    retries: 5
+    delay: 60
+    until: helm_install is succeeded
+    become: yes
+
+  - name: Set secure permissions on kubeconfig
+    file:
+      path: /root/.kube/config
+      mode: '0600'
+    become: yes

@@ -1,0 +1,98 @@
+- name: Deploy MetalLB on Kubernetes
+  hosts: loadbalancer
+  gather_facts: true
+  tasks:
+  - name: Ensure pip is installed (Debian)
+    apt:
+      name: python3-pip
+      state: present
+    when: ansible_os_family == "Debian"
+    become: yes
+
+  - name: Ensure required Python libraries are installed
+    ansible.builtin.pip:
+      name:
+      - kubernetes
+
+  - name: Check if Helm is installed
+    command:
+      cmd: helm version --short
+      warn: no
+    register: helm_check
+    changed_when: false
+    ignore_errors: true
+
+  - name: Install Helm
+    block:
+    - name: Get Helm script
+      get_url:
+        url: https://get.helm.sh/helm-v3.7.0-linux-amd64.tar.gz
+        dest: /tmp/helm-v3.7.0-linux-amd64.tar.gz
+
+    - name: Unpack Helm script
+      unarchive:
+        src: /tmp/helm-v3.7.0-linux-amd64.tar.gz
+        dest: /tmp
+        remote_src: yes
+
+    - name: Move Helm binary to /usr/local/bin
+      command: mv /tmp/linux-amd64/helm /usr/local/bin/helm
+      become: yes
+
+    - name: Remove temporary Helm files
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+      - /tmp/linux-amd64
+      - /tmp/helm-v3.7.0-linux-amd64.tar.gz
+    become: yes
+    when: helm_check.rc != 0
+
+  - name: Add Bitnami repo
+    command: helm repo add bitnami https://charts.bitnami.com/bitnami
+    register: helm_repo_add
+    until: helm_repo_add is succeeded
+    become: yes
+
+  - name: Update Helm repositories
+    command: helm repo update
+    register: helm_repo_update
+    until: helm_repo_update is succeeded
+    become: yes
+
+  - name: Create namespace metallb-system if it does not exist
+    k8s:
+      kubeconfig: /root/.kube/config
+      state: present
+      definition:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: metallb-system
+
+  - name: set permissions on kube config
+    file:
+      path: /home/vagrant/.kube/config
+      mode: '0600'
+
+  - name: Copy metallb_values.yaml file
+    copy:
+      src: /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/Setup-K8S-CLUSTER/playbooks/configs/metallb_value.yaml
+      dest: /home/vagrant/metallb_values.yaml
+    become: yes
+
+
+  - name: Install MetalLB with increased timeout and custom values
+    command: helm install metallb bitnami/metallb -f /home/vagrant/metallb_values.yaml --namespace metallb-system --timeout 600s
+    register: helm_install
+    retries: 5
+    delay: 60
+    until: helm_install is succeeded
+    become: yes
+
+  - name: Set secure permissions on kubeconfig
+    file:
+      path: /root/.kube/config
+      mode: '0600'
+    become: yes

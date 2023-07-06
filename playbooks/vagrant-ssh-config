@@ -1,0 +1,88 @@
+Host kube-master1
+  HostName 127.0.0.1
+  User vagrant
+  Port 2222
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/.vagrant/machines/kube-master1/virtualbox/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+
+Host kube-master2
+  HostName 127.0.0.1
+  User vagrant
+  Port 2200
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/.vagrant/machines/kube-master2/virtualbox/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+
+Host kube-master3
+  HostName 127.0.0.1
+  User vagrant
+  Port 2201
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/.vagrant/machines/kube-master3/virtualbox/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+
+Host kube-worker1
+  HostName 127.0.0.1
+  User vagrant
+  Port 2202
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/.vagrant/machines/kube-worker1/virtualbox/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+
+Host kube-worker2
+  HostName 127.0.0.1
+  User vagrant
+  Port 2203
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/.vagrant/machines/kube-worker2/virtualbox/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+
+Host kube-worker3
+  HostName 127.0.0.1
+  User vagrant
+  Port 2204
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/.vagrant/machines/kube-worker3/virtualbox/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+
+Host kube-Mongodb
+  HostName 127.0.0.1
+  User vagrant
+  Port 2207
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/.vagrant/machines/kube-Mongodb/virtualbox/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+
+Host kube-nfs
+  HostName 127.0.0.1
+  User vagrant
+  Port 2206
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+  PasswordAuthentication no
+  IdentityFile /Users/memoor/Kubernetes-Projects/Deploy-a-HA-k8s-cluster-kubespray/Deploy_HA_K8s_Cluster_using_kubespray/.vagrant/machines/kube-nfs/virtualbox/private_key
+  IdentitiesOnly yes
+  LogLevel FATAL
+

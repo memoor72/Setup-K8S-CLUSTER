@@ -1,0 +1,58 @@
+- name: Deploy Monitoring and Logging Tools
+  hosts: kube_monitoring
+  gather_facts: False
+  tasks:
+  - name: Add Prometheus Helm repository
+    command:
+      cmd: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      warn: false
+
+  - name: Add Grafana Helm repository
+    command:
+      cmd: helm repo add grafana https://grafana.github.io/helm-charts
+      warn: false
+
+  - name: Install Prometheus Helm chart
+    kubernetes.core.helm: # Updated module name
+      name: prometheus
+      chart_ref: prometheus-community/kube-prometheus-stack
+      release_namespace: monitoring
+      create_namespace: true
+      wait_timeout: 600 # Replaced 'release_timeout' with 'wait_timeout'
+      release_values:
+        prometheus:
+          prometheusSpec:
+            retention: '7d'
+        grafana:
+          enabled: false
+
+  - name: Install Grafana Loki Helm chart
+    kubernetes.core.helm: # Updated module name
+      name: loki
+      chart_ref: grafana/loki-stack
+      release_namespace: logging
+      create_namespace: true
+      release_values:
+        promtail:
+          enabled: true
+
+  - name: Install Grafana Helm chart
+    kubernetes.core.helm: # Updated module name
+      name: grafana
+      chart_ref: grafana/grafana
+      release_namespace: monitoring
+      release_values:
+        adminPassword: prom-operator
+        datasources:
+          datasources.yaml:
+            apiVersion: 1
+            datasources:
+            - name: Prometheus
+              type: prometheus
+              url: http://prometheus-server.monitoring.svc.cluster.local
+              access: proxy
+              isDefault: true
+            - name: Loki
+              type: loki
+              url: http://loki.logging.svc.cluster.local
+              access: proxy

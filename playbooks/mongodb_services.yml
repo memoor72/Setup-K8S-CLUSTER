@@ -1,0 +1,82 @@
+- name: Configure MongoDB on Kubernetes
+  hosts: kube_db_svc
+  gather_facts: False
+  vars:
+    mongodb_password: "MyCompL3xP@ssw0rd!2023"
+    mongodb_host: "192.168.50.17"
+    mongodb_port: 27017
+    mongodb_namespace: "mongodb-prod"
+    mongodb_pvc_name: "my-mongodb" # PVC name
+  tasks:
+  - name: Check if Helm is installed
+    command: helm version --short
+    register: helm_check
+    ignore_errors: yes
+
+  - name: Ensure pip3 is installed
+    apt:
+      name: python3-pip
+      state: present
+      update_cache: yes
+    become: yes
+
+  - name: Install Helm (if not installed)
+    shell: |
+      curl -fsSL -o /tmp/get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+      chmod 700 /tmp/get_helm.sh
+      /tmp/get_helm.sh
+    when: helm_check.failed
+
+  - name: Add Bitnami Helm repository
+    command: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+  - name: Update Helm repositories
+    command: helm repo update
+
+  - name: Create namespace if it does not exist
+    command: kubectl create namespace {{ mongodb_namespace }}
+    register: namespace_check
+    failed_when: "'AlreadyExists' not in namespace_check.stderr and namespace_check.rc != 0"
+
+  - name: Check if Kubernetes secret exists
+    command: kubectl get secret mongo-secret -n "{{ mongodb_namespace }}"
+    register: secret_check
+    ignore_errors: yes
+
+  - name: Create Kubernetes secret for MongoDB credentials
+    command: kubectl create secret generic mongo-secret --from-literal=mongodb-root-password="{{ mongodb_password }}" -n "{{ mongodb_namespace }}"
+    when: secret_check.failed
+
+  - name: Check if MongoDB Helm chart is installed
+    command: helm list -n "{{ mongodb_namespace }}" -f my-mongo -o json
+    register: helm_list
+    ignore_errors: yes
+
+  - name: Install MongoDB Helm chart
+    command: helm install my-mongo bitnami/mongodb --set existingSecret=mongo-secret --set persistence.existingClaim="mongo-pvc" -n "{{ mongodb_namespace }}"
+    when: helm_list.stdout == "[]"
+
+  - name: Ensure kubernetes library is installed
+    pip:
+      name: kubernetes
+      executable: pip3
+
+
+  - name: Create a Kubernetes Service for MongoDB
+    k8s:
+      state: present
+      namespace: "{{ mongodb_namespace }}"
+      definition:
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: mongo-service
+        spec:
+          type: ExternalName
+          externalName: "{{ mongodb_host }}"
+          ports:
+          - protocol: TCP
+            port: 27017
+            targetPort: "{{ mongodb_port }}"
+
+

@@ -1,0 +1,80 @@
+- hosts: kube_control_plane
+  become: yes
+  tasks:
+  - name: Remove Calico operator
+    command: kubectl delete --ignore-not-found -f /tmp/tigera-operator.yaml
+
+  - name: Remove Calico custom resources
+    command: kubectl delete --ignore-not-found -f /tmp/calico.yaml
+
+  - name: Remove Calico system namespace
+    command: kubectl delete namespace calico-system --ignore-not-found=true
+
+  - name: Remove Tigera operator namespace
+    command: kubectl delete namespace tigera-operator --ignore-not-found=true
+
+  - name: Remove Calico CRDs
+    command: kubectl delete crd --all --ignore-not-found=true
+
+  - name: Download Calico operator
+    get_url:
+      url: https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/tigera-operator.yaml
+      dest: /tmp/tigera-operator.yaml
+
+  - name: Apply Calico operator
+    command: kubectl create -f /tmp/tigera-operator.yaml
+    run_once: true
+
+  - name: Download Calico custom resources
+    get_url:
+      url: https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/custom-resources.yaml
+      dest: /tmp/calico.yaml
+    run_once: true
+
+  - name: Apply Calico custom resources
+    command: kubectl apply -f /tmp/calico.yaml
+    run_once: true
+
+- hosts: all
+  become: yes
+  vars:
+    inbound_rules:
+    - {source: "192.168.50.11/24", port: "6443"} # kube-master1
+    - {source: "192.168.50.12/24", port: "6443"} # kube-master2
+    - {source: "192.168.50.13/24", port: "6443"} # kube-master3
+    - {source: "192.168.50.14/24", port: "10250"} # kube-worker1
+    - {source: "192.168.50.15/24", port: "10250"} # kube-worker2
+    - {source: "192.168.50.16/24", port: "10250"} # kube-worker3
+    - {source: "192.168.50.17/24", port: "27017"} # MongoDB
+    - {source: "192.168.50.18/24", port: "2049",} # NFS
+
+  tasks:
+  - name: Install iptables-persistent
+    apt:
+      name: iptables-persistent
+      state: present
+
+  - name: Default-Deny iptables firewall (input)
+    ansible.builtin.iptables:
+      chain: INPUT
+      policy: DROP
+
+  - name: Default-Deny iptables firewall (forward)
+    ansible.builtin.iptables:
+      chain: FORWARD
+      policy: DROP
+
+  - name: Default-Allow iptables firewall (output)
+    ansible.builtin.iptables:
+      chain: OUTPUT
+      policy: ACCEPT
+
+  - name: Allow all traffic on the loopback interface
+    ansible.builtin.iptables:
+      chain: INPUT
+      in_interface: lo
+      jump: ACCEPT
+
+  - name: Allow established and related connections
+    ansible.builtin.iptables:
+

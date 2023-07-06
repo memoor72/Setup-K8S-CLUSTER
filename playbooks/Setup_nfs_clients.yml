@@ -1,0 +1,11 @@
+- hosts: nfs_clients
+  become: yes
+  tasks:
+  - name: Update apt cache
+    apt:
+      update_cache: yes
+
+  - name: Install NFS client package
+    apt:
+      name: nfs-common
+      state: present

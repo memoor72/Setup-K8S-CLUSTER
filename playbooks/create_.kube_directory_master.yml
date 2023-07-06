@@ -1,0 +1,33 @@
+- name: Create Directory and copy kubeconfig file
+  hosts: kube_control_plane
+  gather_facts: no
+  tasks:
+
+  - name: Check if kubeconfig exists on master nodes
+    stat:
+      path: /root/.kube/config
+    become: yes
+    register: kubeconfig_stat
+
+  - name: Ensure .kube directory exists in /home/vagrant
+    file:
+      path: /home/vagrant/.kube
+      state: directory
+      owner: vagrant
+      group: vagrant
+      mode: '0755'
+
+  - name: Copy kube config to /home/vagrant/.kube
+    command:
+      cmd: cp /root/.kube/config /home/vagrant/.kube/config
+      warn: false # This is optional; it prevents warnings about using shell commands.
+    become: yes
+    become_user: root
+
+  - name: Change file ownership and permissions
+    file:
+      path: /home/vagrant/.kube/config
+      owner: vagrant
+      group: vagrant
+      mode: '0644'
+  become: yes

@@ -1,0 +1,84 @@
+- name: Deploy MongoDB on Separate Server
+  hosts: kube_db
+  gather_facts: False
+  vars:
+    mongodb_password: "MyCompL3xP@ssw0rd!2023"
+  tasks:
+
+  - name: Import MongoDB public GPG key
+    ansible.builtin.apt_key:
+      url: https://www.mongodb.org/static/pgp/server-6.0.asc
+      state: present
+    become: yes
+
+  - name: Add MongoDB repository
+    ansible.builtin.apt_repository:
+      repo: deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/6.0 multiverse
+      state: present
+    become: yes
+
+  - name: Install MongoDB packages
+    ansible.builtin.apt:
+      name: mongodb-org
+      state: present
+      update_cache: yes
+    become: yes
+
+  - name: Start MongoDB service
+    service:
+      name: mongod
+      state: started
+      enabled: yes
+    become: yes
+
+  - name: Wait for MongoDB to start
+    wait_for:
+      host: localhost
+      port: 27017
+      delay: 5
+    become: yes
+
+  - name: Ensure NFS mongo directory exists
+    file:
+      path: /srv/nfs/mongo
+      state: directory
+      mode: '0700'
+    become: yes
+
+  - name: Change ownership of mongo directory
+    file:
+      path: /srv/nfs/mongo
+      owner: mongodb
+      group: mongodb
+    become: yes
+
+  - name: Install pip (Python package manager)
+    ansible.builtin.apt:
+      name: python3-pip
+      state: present
+      update_cache: yes
+    become: yes
+
+  - name: Install pymongo Python library
+    ansible.builtin.pip:
+      name: pymongo
+    become: yes
+
+  - name: Create MongoDB admin user
+    mongodb_user:
+      login_host: localhost
+      login_port: 27017
+      login_user: root
+      login_password: "{{ mongodb_password }}"
+      database: admin
+      name: root
+      password: "{{ mongodb_password }}"
+      roles:
+      - {db: "admin", role: "userAdminAnyDatabase"}
+      - {db: "admin", role: "readWriteAnyDatabase"}
+      state: present
+    become: yes
+
+
+
+
